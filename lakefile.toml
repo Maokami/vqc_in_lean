@@ -1,0 +1,10 @@
+name = "vqc_in_lean"
+version = "0.1.0"
+defaultTargets = ["vqc_in_lean"]
+
+[[lean_lib]]
+name = "VqcInLean"
+
+[[lean_exe]]
+name = "vqc_in_lean"
+root = "Main"
