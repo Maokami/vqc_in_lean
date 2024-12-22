@@ -5,6 +5,17 @@ defaultTargets = ["vqc_in_lean"]
 [[lean_lib]]
 name = "VqcInLean"
 
+[leanOptions]
+pp.unicode.fun = true # pretty-prints `fun a ↦ b`
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+
+[[require]]
+name = "aesop"
+scope = "leanprover-community"
+
 [[lean_exe]]
 name = "vqc_in_lean"
 root = "Main"
