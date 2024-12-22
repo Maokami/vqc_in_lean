@@ -17,23 +17,30 @@ instance : CoeFun Qubit (λ _ => Fin 2 → Fin 1 → ℂ) where
   coe ϕ := λ i j => ϕ.mat i j
 
 -- Define standard basis Qubits
+@[simp]
 def qubit0 : Qubit :=
   ⟨!![1; 0]⟩
-
+@[simp]
 def qubit1 : Qubit :=
   ⟨!![0; 1]⟩
 
-notation "∣0⟩" => qubit0
-notation "∣1⟩" => qubit1
+-- Qubit state based on input
+@[simp]
+def qubit (x : ℕ) : Qubit :=
+  if x = 0 then qubit0 else qubit1
+
+notation "∣" x "⟩" => qubit x
+
 -- Any Qubit can be expressed as a linear combination of ∣0⟩ and ∣1⟩
 theorem qubit_decomposition (ϕ : Qubit) : ∃ α β : ℂ, ∀ i, ϕ i 0 = α * qubit0 i 0 + β * qubit1 i 0 := by
   use ϕ 0 0, ϕ 1 0
   intro i
   fin_cases i
   all_goals
-    simp [qubit0, qubit1]
+    simp
 
 -- Define Well-formed Qubit
+@[simp]
 def WF_Qubit (ϕ : Qubit) : Prop :=
   ∑ i : Fin 2, ‖ϕ i 0‖ ^ 2 = 1
 
@@ -61,11 +68,8 @@ theorem WF_Qubit_alt (ϕ : Qubit) :
     exact h_matrix
 
 -- Prove that the basis Qubits are WF_Qubits
-theorem WF_qubit0 : WF_Qubit ∣0⟩ := by
-  simp [WF_Qubit, qubit0]
-
-theorem WF_qubit1 : WF_Qubit ∣1⟩ := by
-  simp [WF_Qubit, qubit1]
+theorem WF_qubit0 : WF_Qubit ∣0⟩ := by simp
+theorem WF_qubit1 : WF_Qubit ∣1⟩ := by simp
 
 -- Define and verify Unitary
 def WF_Unitary {n : ℕ} (U : Matrix (Fin n) (Fin n) ℂ) : Prop :=
@@ -89,10 +93,8 @@ theorem valid_qubit_function :
 -- Define Unitary operations (e.g., Pauli matrices)
 def X : Matrix (Fin 2) (Fin 2) ℂ :=
   ![![0, 1], ![1, 0]]
-
 def Y : Matrix (Fin 2) (Fin 2) ℂ :=
   ![![0, -I], ![I, 0]]
-
 def Z : Matrix (Fin 2) (Fin 2) ℂ :=
   ![![1, 0], ![0, -1]]
 
@@ -191,12 +193,12 @@ theorem measure0_idem (ϕ : Qubit) (p : ℝ) : Measure ∣0⟩ (p, ϕ) → p ≠
   intro h_meas h_nonzero
   cases h_meas
   · rfl
-  · simp [qubit0] at h_nonzero
+  · simp at h_nonzero
 
 theorem measure1_idem (ϕ : Qubit) (p : ℝ) : Measure ∣1⟩ (p, ϕ) → p ≠ 0 → ϕ = ∣1⟩ := by
   intro h_meas h_nonzero
   cases h_meas
-  · simp [qubit1] at h_nonzero
+  · simp at h_nonzero
   · rfl
 
 end Qubit
