@@ -8,6 +8,12 @@ structure Qubit where
 
 namespace Qubit
 
+@[ext]
+lemma ext {ϕ ψ : Qubit} (h : ϕ.mat = ψ.mat) : ϕ = ψ := by
+  cases ϕ
+  cases ψ
+  simp_all
+
 -- Define coercion to Matrix
 instance : Coe Qubit (Matrix (Fin 2) (Fin 1) ℂ) where
   coe := Qubit.mat
@@ -15,6 +21,20 @@ instance : Coe Qubit (Matrix (Fin 2) (Fin 1) ℂ) where
 -- Make Qubit callable as a function
 instance : CoeFun Qubit (λ _ => Fin 2 → Fin 1 → ℂ) where
   coe ϕ := λ i j => ϕ.mat i j
+
+-- Scalar multiplication for Qubit
+instance : HMul ℂ Qubit Qubit where
+  hMul c ϕ := { mat := c • ϕ.mat }
+
+-- Addition for Qubit
+instance : HAdd Qubit Qubit Qubit where
+  hAdd ϕ ψ := { mat := ϕ.mat + ψ.mat }
+
+@[simp]
+lemma smul_apply (c : ℂ) (ϕ : Qubit) (i j) : (c * ϕ) i j = c * ϕ i j := rfl
+
+@[simp]
+lemma add_apply (ϕ ψ : Qubit) (i j) : (ϕ + ψ) i j = ϕ i j + ψ i j := rfl
 
 -- Define standard basis Qubits
 @[simp]
@@ -32,12 +52,14 @@ def qubit (x : ℕ) : Qubit :=
 notation "∣" x "⟩" => qubit x
 
 -- Any Qubit can be expressed as a linear combination of ∣0⟩ and ∣1⟩
-theorem qubit_decomposition (ϕ : Qubit) : ∃ α β : ℂ, ∀ i, ϕ i 0 = α * qubit0 i 0 + β * qubit1 i 0 := by
+theorem qubit_decomposition (ϕ : Qubit) : ∃ α β : ℂ, ϕ = α * ∣0⟩ + β * ∣1⟩ := by
   use ϕ 0 0, ϕ 1 0
-  intro i
+  ext i j
   fin_cases i
   all_goals
-    simp
+    fin_cases j
+    all_goals
+      simp
 
 -- Define Well-formed Qubit
 @[simp]
@@ -136,9 +158,8 @@ theorem WF_H : WF_Unitary H := by
   all_goals
     fin_cases j
     all_goals
-      simp [smul_apply, ofReal_div, ofReal_inv, ofReal_mul]
       simp only [starRingEnd_apply]
-      repeat rw [smul_apply]
+      repeat rw [Matrix.smul_apply]
       field_simp
   all_goals
     ring_nf
@@ -160,9 +181,8 @@ theorem H_Hermitian : Hermitian H := by
   all_goals
     fin_cases j
     all_goals
-      simp [smul_apply]
       simp only [starRingEnd_apply]
-      repeat rw [smul_apply]
+      repeat rw [Matrix.smul_apply]
       field_simp
 
 -- Prove that Hadamard applied twice returns the original state
