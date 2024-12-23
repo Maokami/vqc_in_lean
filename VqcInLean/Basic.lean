@@ -1,2 +1,2 @@
 import VqcInLean.Qubit
-import VqcInLean.Multiqubit
+import VqcInLean.QState
