@@ -55,11 +55,10 @@ notation "∣" x "⟩" => qubit x
 theorem qubit_decomposition (ϕ : Qubit) : ∃ α β : ℂ, ϕ = α * ∣0⟩ + β * ∣1⟩ := by
   use ϕ 0 0, ϕ 1 0
   ext i j
+  fin_cases j
   fin_cases i
   all_goals
-    fin_cases j
-    all_goals
-      simp
+    simp
 
 -- Define Well-formed Qubit
 @[simp]

@@ -11,12 +11,6 @@ structure QState (n : ℕ) where
 
 namespace QState
 
-@[ext]
-lemma ext {n : ℕ} {ϕ ψ : QState n} (h : ϕ.mat = ψ.mat) : ϕ = ψ := by
-  cases ϕ
-  cases ψ
-  simp_all
-
 instance : Repr (QState n) where
   reprPrec _ _ := s!"QState with {n} qubits"
 
@@ -25,7 +19,7 @@ instance : Coe (QState n) (Matrix (Fin (2 ^ n)) (Fin 1) ℂ) where
   coe := QState.mat
 
 -- Make Qubit callable as a function
-instance : CoeFun (QState n) (λ _ => Fin n → Fin 1 → ℂ) where
+instance : CoeFun (QState n) (λ _ => Fin (2 ^ n) → Fin 1 → ℂ) where
   coe ϕ := λ i j => ϕ.mat i j
 
 -- Coerce Qubit to QState 1
@@ -39,6 +33,32 @@ instance : HMul ℂ (QState n) (QState n) where
 -- Addition for QState
 instance : HAdd (QState n) (QState n) (QState n) where
   hAdd ϕ ψ := { mat := ϕ.mat + ψ.mat }
+
+-- Multiplication for QState
+noncomputable instance : HMul (Matrix (Fin (2 ^ n)) (Fin (2 ^ n)) ℂ) (QState n) (QState n) where
+  hMul u ϕ := { mat := u * ϕ.mat }
+
+@[ext]
+lemma ext {n : ℕ} {ϕ ψ : QState n} (h : ∀ i j, ϕ i j = ψ i j) : ϕ = ψ := by
+  cases ϕ
+  cases ψ
+  simp_all
+  ext i j
+  exact h i j
+
+@[simp]
+lemma eq_coe (ϕ : QState n) :
+    ϕ.mat = (ϕ : Matrix (Fin (2 ^ n)) (Fin 1) ℂ) := rfl
+
+@[simp]
+lemma apply_eq_coe (ϕ : QState n) (i j) :
+    ϕ.mat i j = (ϕ : Matrix (Fin (2 ^ n)) (Fin 1) ℂ) i j := rfl
+
+@[simp]
+lemma smul_apply (c : ℂ) (ϕ : QState n) (i j) : (c * ϕ) i j = c * ϕ i j := rfl
+
+@[simp]
+lemma add_apply (ϕ ψ : QState n) (i j) : (ϕ + ψ) i j = ϕ i j + ψ i j := rfl
 
 -- Define Kronecker product for QState
 @[simp]
@@ -62,27 +82,93 @@ def fromVector : {n : ℕ} → Vector ℕ n → QState n
     Eq.mp (by simp [add_comm]) (q ⊗ₖ rest : QState (1 + n))
 
 macro "∣" xs:term,* "⟩" : term => do
-  -- Get the list of terms from `xs:term,*`
   let stxList := xs.getElems
-  -- (For example, xs.getElems would return [Syntax| 0, Syntax| 1, Syntax| 2])
-
-  -- Compute the size of the array
   let n := stxList.size
-
-  -- Create a proof for “#[ $[ $stxList],* ].size = n”
-  -- This uses `by decide` or `by native_decide` to handle the proof
   let sizeProof ← `((by decide : #[ $[ $stxList],* ].size = $(mkNumLit (toString n))))
-
-  -- Final result: fromVector (Vector.mk #[…] sizeProof)
   `(fromVector (Vector.mk #[ $[ $stxList],* ] $sizeProof))
 
 #eval ∣0, 0, 1, 0⟩
 
--- TODO
-lemma test_qubits : ∣0, 1⟩ = ∣0⟩ ⊗ₖ ∣1⟩ := by sorry
+lemma test_qubits : ∣0, 1⟩ = ∣0⟩ ⊗ₖ ∣1⟩ := by
+  ext i j
+  simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
+  have h1 : ({ toArray := #[0, 1], size_toArray := by decide }: Vector ℕ 2).head = 0 := by rfl
+  have h2 : ({ toArray := #[0, 1], size_toArray := by decide }: Vector ℕ 2).tail.head = 1 := by rfl
+  have hh1 : ({ toArray := #[0], size_toArray := by decide }: Vector ℕ 1).head = 0 := by rfl
+  have hh2 : ({ toArray := #[1], size_toArray := by decide }: Vector ℕ 1).head = 1 := by rfl
+  have fun_id_apply {α : Type} (x : α) : (fun i ↦ i) x = x := rfl
+  have hone : ∀ x y : Fin 1, (1 : Matrix (Fin 1) (Fin 1) ℂ) x y = 1 := by
+    intro x y
+    fin_cases x
+    fin_cases y
+    rfl
+
+  fin_cases j
+  fin_cases i
+  all_goals
+    simp[h1, h2, hh1, hh2, if_true, if_false]
+
+  rw [fun_id_apply]
+  simp_all
+
+-- TODO : How to unify the following lemmas into a single lemma?
+-- fromVector00 = ![1,0,0,0]
+lemma fromVector00:
+    ∣0, 0⟩ = ⟨![1,0,0,0]⟩  := by
+  ext i j
+  simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
+
+  have h1 : ({ toArray := #[0, 0], size_toArray := by decide }: Vector ℕ 2).head = 0 := by rfl
+  have h2 : ({ toArray := #[0, 0], size_toArray := by decide }: Vector ℕ 2).tail.head = 0 := by rfl
+
+  fin_cases j
+  fin_cases i
+  all_goals
+    simp [h1, h2]
+    try norm_cast
+
+lemma fromVector01:
+    ∣0, 1⟩ = ⟨![0,1,0,0]⟩  := by
+  ext i j
+  simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
+
+  have h1 : ({ toArray := #[0, 1], size_toArray := by decide }: Vector ℕ 2).head = 0 := by rfl
+  have h2 : ({ toArray := #[0, 1], size_toArray := by decide }: Vector ℕ 2).tail.head = 1 := by rfl
+
+  fin_cases j
+  fin_cases i
+  all_goals
+    simp [h1, h2]
+    try norm_cast
+
+lemma fromVector10 :
+    ∣1, 0⟩ = ⟨![0,0,1,0]⟩  := by
+  ext i j
+  simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
+
+  have h1 : ({ toArray := #[1, 0], size_toArray := by decide }: Vector ℕ 2).head = 1 := by rfl
+  have h2 : ({ toArray := #[1, 0], size_toArray := by decide }: Vector ℕ 2).tail.head = 0 := by rfl
+
+  fin_cases i
+  all_goals
+    simp [h1, h2]
+    try norm_cast
+
+lemma fromVector11 :
+    ∣1, 1⟩ = ⟨![0,0,0,1]⟩  := by
+  ext i j
+  simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
+
+  have h1 : ({ toArray := #[1, 1], size_toArray := by decide }: Vector ℕ 2).head = 1 := by rfl
+  have h2 : ({ toArray := #[1, 1], size_toArray := by decide }: Vector ℕ 2).tail.head = 1 := by rfl
+
+  fin_cases i
+  all_goals
+    simp [h1, h2]
+    try norm_cast
 
 /-- Lemma on decomposition of a 2-qubit state into basis states. -/
-lemma qubit_decomposition2 (ϕ : QState 2) :
+theorem qubit_decomposition2 (ϕ : QState 2) :
   ∃ (α β γ δ : ℂ), ϕ = α * ∣0, 0⟩ + β * ∣0, 1⟩ + γ * ∣1, 0⟩ + δ * ∣1, 1⟩ := by
   let α := ϕ 0 0   -- row=0, col=0
   let β := ϕ 1 0   -- row=1, col=0
@@ -96,15 +182,111 @@ lemma qubit_decomposition2 (ϕ : QState 2) :
   fin_cases j
   fin_cases i
   all_goals
-    dsimp
-    sorry
+    simp [fromVector00, fromVector01, fromVector10, fromVector11]
 
 /-- Define the CNOT gate as a unitary matrix. -/
-def CNOT : Matrix (Fin 4) (Fin 4) ℂ :=
+def CNOT : Matrix (Fin (2 ^ 2)) (Fin (2 ^ 2)) ℂ :=
   ![![1, 0, 0, 0],
     ![0, 1, 0, 0],
     ![0, 0, 0, 1],
     ![0, 0, 1, 0]]
 
+-- Define the basis states for 2 qubits
+def basis2 (i : Fin 4) : QState 2 :=
+  match i with
+  | 0 => ∣0, 0⟩
+  | 1 => ∣0, 1⟩
+  | 2 => ∣1, 0⟩
+  | 3 => ∣1, 1⟩
+
+-- Simplify the action of CNOT on basis states
+lemma CNOT_basis_action (i : Fin 4) :
+  CNOT * basis2 i =
+    match i with
+    | 0 => basis2 0
+    | 1 => basis2 1
+    | 2 => basis2 3
+    | 3 => basis2 2
+:= by
+  fin_cases i
+  all_goals
+    simp [fromVector00, fromVector01, fromVector10, fromVector11,
+    CNOT, basis2, instHMulMatrixFinHPowNatOfNatComplex]
+    ext i j
+    fin_cases j
+    fin_cases i
+    all_goals
+      simp only [HMul.hMul]
+      simp
+
+lemma CNOT00 : CNOT * ∣0, 0⟩ = ∣0, 0⟩ :=
+  CNOT_basis_action 0
+
+lemma CNOT01 : CNOT * ∣0, 1⟩ = ∣0, 1⟩ :=
+  CNOT_basis_action 1
+
+lemma CNOT10 : CNOT * ∣1, 0⟩ = ∣1, 1⟩ :=
+  CNOT_basis_action 2
+
+lemma CNOT11 : CNOT * ∣1, 1⟩ = ∣1, 0⟩ :=
+  CNOT_basis_action 3
+
+-- Definition of a Bell state.
+noncomputable def bell : QState 2 :=
+   (1 / √2 : ℂ) * ∣0, 0⟩ + (1 / √2 : ℂ) * ∣1, 1⟩
+
+-- TODO
+-- Generate a Bell pair and show equivalence to the Bell state.
+-- def bell' : QState 2 :=
+--
+-- lemma bell_bell' : bell = bell' :=
+-- sorry
+
+-- Define additional useful 2-qubit gates.
+def NOTC : Matrix (Fin 4) (Fin 4) ℂ :=
+  ![![1, 0, 0, 0],
+    ![0, 0, 0, 1],
+    ![0, 0, 1, 0],
+    ![0, 1, 0, 0]]
+
+def CZ : Matrix (Fin 4) (Fin 4) ℂ :=
+  ![![1, 0, 0, 0],
+    ![0, 1, 0, 0],
+    ![0, 0, 1, 0],
+    ![0, 0, 0, -1]]
+
+def SWAP : Matrix (Fin (2 ^ 2)) (Fin (2 ^ 2)) ℂ :=
+  ![![1, 0, 0, 0],
+    ![0, 0, 1, 0],
+    ![0, 1, 0, 0],
+    ![0, 0, 0, 1]]
+
+-- TODO
+-- SWAP gate swaps qubits.
+-- lemma SWAPxy : ∀ x y : Fin 2, SWAP * (∣x, y⟩ : QState 2) = ∣y, x⟩ :=
+--   sorry
+
+-- Define total measurement on 2 qubits.
+inductive measure_total : QState 2 → ℝ × QState 2 → Prop
+| measure00 (ϕ : QState 2) (α β γ δ : ℂ) :
+    ϕ = α * ∣0, 0⟩ + β * ∣0, 1⟩ + γ * ∣1, 0⟩ + δ * ∣1, 1⟩ →
+    measure_total ϕ (normSq α, ∣0, 0⟩)
+| measure01 (ϕ : QState 2) (α β γ δ : ℂ) :
+    ϕ = α * ∣0, 0⟩ + β * ∣0, 1⟩ + γ * ∣1, 0⟩ + δ * ∣1, 1⟩ →
+    measure_total ϕ (normSq β, ∣0, 1⟩)
+| measure10 (ϕ : QState 2) (α β γ δ : ℂ) :
+    ϕ = α * ∣0, 0⟩ + β * ∣0, 1⟩ + γ * ∣1, 0⟩ + δ * ∣1, 1⟩ →
+    measure_total ϕ (normSq γ, ∣1, 0⟩)
+| measure11 (ϕ : QState 2) (α β γ δ : ℂ) :
+    ϕ = α * ∣0, 0⟩ + β * ∣0, 1⟩ + γ * ∣1, 0⟩ + δ * ∣1, 1⟩ →
+    measure_total ϕ (normSq δ, ∣1, 1⟩)
+
+-- TODO
+-- Partial measurement on 2 qubits.
+--inductive measure_partial : ℕ → QState 2 → ℝ × QState 2 → Prop
+--| measure_p_1_0 : sorry
+--| measure_p_1_1 : sorry
+--| measure_p_2_0 : sorry
+--| measure_p_2_1 : sorry
 
 end QState
