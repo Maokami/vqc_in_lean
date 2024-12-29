@@ -84,18 +84,19 @@ def fromVector : {n : ℕ} → Vector ℕ n → QState n
 macro "∣" xs:term,* "⟩" : term => do
   let stxList := xs.getElems
   let n := stxList.size
-  let sizeProof ← `((by decide : #[ $[ $stxList],* ].size = $(mkNumLit (toString n))))
+  let sizeProof ← `((by rfl : #[ $[ $stxList],* ].size = $(mkNumLit (toString n))))
   `(fromVector (Vector.mk #[ $[ $stxList],* ] $sizeProof))
 
+#eval ∣0⟩
 #eval ∣0, 0, 1, 0⟩
 
 lemma test_qubits : ∣0, 1⟩ = ∣0⟩ ⊗ₖ ∣1⟩ := by
   ext i j
   simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
-  have h1 : ({ toArray := #[0, 1], size_toArray := by decide }: Vector ℕ 2).head = 0 := by rfl
-  have h2 : ({ toArray := #[0, 1], size_toArray := by decide }: Vector ℕ 2).tail.head = 1 := by rfl
-  have hh1 : ({ toArray := #[0], size_toArray := by decide }: Vector ℕ 1).head = 0 := by rfl
-  have hh2 : ({ toArray := #[1], size_toArray := by decide }: Vector ℕ 1).head = 1 := by rfl
+  have h1 : ({ toArray := #[0, 1], size_toArray := by rfl }: Vector ℕ 2).head = 0 := by rfl
+  have h2 : ({ toArray := #[0, 1], size_toArray := by rfl }: Vector ℕ 2).tail.head = 1 := by rfl
+  have hh1 : ({ toArray := #[0], size_toArray := by rfl }: Vector ℕ 1).head = 0 := by rfl
+  have hh2 : ({ toArray := #[1], size_toArray := by rfl }: Vector ℕ 1).head = 1 := by rfl
   have fun_id_apply {α : Type} (x : α) : (fun i ↦ i) x = x := rfl
   have hone : ∀ x y : Fin 1, (1 : Matrix (Fin 1) (Fin 1) ℂ) x y = 1 := by
     intro x y
@@ -106,7 +107,7 @@ lemma test_qubits : ∣0, 1⟩ = ∣0⟩ ⊗ₖ ∣1⟩ := by
   fin_cases j
   fin_cases i
   all_goals
-    simp[h1, h2, hh1, hh2, if_true, if_false]
+    simp [h1, h2, hh1, hh2, if_true, if_false]
 
   rw [fun_id_apply]
   simp_all
@@ -118,8 +119,8 @@ lemma fromVector00:
   ext i j
   simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
 
-  have h1 : ({ toArray := #[0, 0], size_toArray := by decide }: Vector ℕ 2).head = 0 := by rfl
-  have h2 : ({ toArray := #[0, 0], size_toArray := by decide }: Vector ℕ 2).tail.head = 0 := by rfl
+  have h1 : ({ toArray := #[0, 0], size_toArray := by rfl }: Vector ℕ 2).head = 0 := by rfl
+  have h2 : ({ toArray := #[0, 0], size_toArray := by rfl }: Vector ℕ 2).tail.head = 0 := by rfl
 
   fin_cases j
   fin_cases i
@@ -132,8 +133,8 @@ lemma fromVector01:
   ext i j
   simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
 
-  have h1 : ({ toArray := #[0, 1], size_toArray := by decide }: Vector ℕ 2).head = 0 := by rfl
-  have h2 : ({ toArray := #[0, 1], size_toArray := by decide }: Vector ℕ 2).tail.head = 1 := by rfl
+  have h1 : ({ toArray := #[0, 1], size_toArray := by rfl }: Vector ℕ 2).head = 0 := by rfl
+  have h2 : ({ toArray := #[0, 1], size_toArray := by rfl }: Vector ℕ 2).tail.head = 1 := by rfl
 
   fin_cases j
   fin_cases i
@@ -146,8 +147,8 @@ lemma fromVector10 :
   ext i j
   simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
 
-  have h1 : ({ toArray := #[1, 0], size_toArray := by decide }: Vector ℕ 2).head = 1 := by rfl
-  have h2 : ({ toArray := #[1, 0], size_toArray := by decide }: Vector ℕ 2).tail.head = 0 := by rfl
+  have h1 : ({ toArray := #[1, 0], size_toArray := by rfl }: Vector ℕ 2).head = 1 := by rfl
+  have h2 : ({ toArray := #[1, 0], size_toArray := by rfl }: Vector ℕ 2).tail.head = 0 := by rfl
 
   fin_cases i
   all_goals
@@ -159,8 +160,8 @@ lemma fromVector11 :
   ext i j
   simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
 
-  have h1 : ({ toArray := #[1, 1], size_toArray := by decide }: Vector ℕ 2).head = 1 := by rfl
-  have h2 : ({ toArray := #[1, 1], size_toArray := by decide }: Vector ℕ 2).tail.head = 1 := by rfl
+  have h1 : ({ toArray := #[1, 1], size_toArray := by rfl }: Vector ℕ 2).head = 1 := by rfl
+  have h2 : ({ toArray := #[1, 1], size_toArray := by rfl }: Vector ℕ 2).tail.head = 1 := by rfl
 
   fin_cases i
   all_goals
@@ -235,12 +236,15 @@ lemma CNOT11 : CNOT * ∣1, 1⟩ = ∣1, 0⟩ :=
 noncomputable def bell : QState 2 :=
    (1 / √2 : ℂ) * ∣0, 0⟩ + (1 / √2 : ℂ) * ∣1, 1⟩
 
--- TODO
--- Generate a Bell pair and show equivalence to the Bell state.
+-- -- Definition of a Bell state generated using CNOT and H gate.
 -- def bell' : QState 2 :=
+--   -- Define H ⊗ₖ 1
+--   let H1: Matrix (Fin (2 ^ 2)) (Fin (2 ^ 2)) ℂ := H ⊗ₖ (1 : Matrix (Fin 2) (Fin 2) ℂ)
+--   CNOT * H1 * ∣0, 0⟩
 --
--- lemma bell_bell' : bell = bell' :=
--- sorry
+-- -- Prove that bell = bell'
+-- lemma bell_bell' : bell = bell' := by
+--   sorry
 
 -- Define additional useful 2-qubit gates.
 def NOTC : Matrix (Fin 4) (Fin 4) ℂ :=
@@ -263,8 +267,28 @@ def SWAP : Matrix (Fin (2 ^ 2)) (Fin (2 ^ 2)) ℂ :=
 
 -- TODO
 -- SWAP gate swaps qubits.
--- lemma SWAPxy : ∀ x y : Fin 2, SWAP * (∣x, y⟩ : QState 2) = ∣y, x⟩ :=
---   sorry
+lemma SWAPxy : ∀ x y : Fin 2, SWAP * (∣x, y⟩ : QState 2) = ∣y, x⟩ := by
+  intros x y
+  fin_cases x
+  all_goals
+    fin_cases y
+    all_goals
+      simp [fromVector00, fromVector01, fromVector10, fromVector11, SWAP]
+      ext i j
+      fin_cases i
+      fin_cases j
+      all_goals
+        simp only [HMul.hMul]
+        simp
+
+-- Define total measurement on 1 qubit.
+inductive measure' : QState 1 → ℝ × QState 1 → Prop
+| measure0 (ϕ : QState 1) (α β : ℂ) :
+    ϕ = α * ∣0⟩ + β * ∣1⟩ →
+    measure' ϕ (normSq α, ∣0⟩)
+| measure1 (ϕ : QState 1) (α β : ℂ) :
+    ϕ = α * ∣0⟩ + β * ∣1⟩ →
+    measure' ϕ (normSq β, ∣1⟩)
 
 -- Define total measurement on 2 qubits.
 inductive measure_total : QState 2 → ℝ × QState 2 → Prop
@@ -281,12 +305,26 @@ inductive measure_total : QState 2 → ℝ × QState 2 → Prop
     ϕ = α * ∣0, 0⟩ + β * ∣0, 1⟩ + γ * ∣1, 0⟩ + δ * ∣1, 1⟩ →
     measure_total ϕ (normSq δ, ∣1, 1⟩)
 
--- TODO
--- Partial measurement on 2 qubits.
---inductive measure_partial : ℕ → QState 2 → ℝ × QState 2 → Prop
---| measure_p_1_0 : sorry
---| measure_p_1_1 : sorry
---| measure_p_2_0 : sorry
---| measure_p_2_1 : sorry
+inductive measure_partial : ℕ → QState 2 → ℝ × QState 2 → Prop
+| measure_p_1_0 (ϕ ϕ' : QState 2) (α β γ δ : ℂ) (p : ℝ) :
+    ϕ = α * ∣0, 0⟩ + β * ∣0, 1⟩ + γ * ∣1, 0⟩ + δ * ∣1, 1⟩ →
+    p = (normSq α + normSq β) →
+    ϕ' = (1 / √p : ℂ) * (α * ∣0, 0⟩ + β * ∣0, 1⟩) →
+    measure_partial 1 ϕ (p, ϕ')
+| measure_p_1_1 (ϕ ϕ' : QState 2) (α β γ δ : ℂ) (p : ℝ) :
+    ϕ = α * ∣0, 0⟩ + β * ∣0, 1⟩ + γ * ∣1, 0⟩ + δ * ∣1, 1⟩ →
+    p = (normSq γ + normSq δ) →
+    ϕ' = (1 / √p : ℂ) * (γ * ∣1, 0⟩ + δ * ∣1, 1⟩) →
+    measure_partial 1 ϕ (p, ϕ')
+| measure_p_2_0 (ϕ ϕ' : QState 2) (α β γ δ : ℂ) (p : ℝ) :
+    ϕ = α * ∣0, 0⟩ + β * ∣0, 1⟩ + γ * ∣1, 0⟩ + δ * ∣1, 1⟩ →
+    p = (normSq α + normSq γ) →
+    ϕ' = (1 / √p : ℂ) * (α * ∣0, 0⟩ + γ * ∣1, 0⟩) →
+    measure_partial 2 ϕ (p, ϕ')
+| measure_p_2_1 (ϕ ϕ' : QState 2) (α β γ δ : ℂ) (p : ℝ) :
+    ϕ = α * ∣0, 0⟩ + β * ∣0, 1⟩ + γ * ∣1, 0⟩ + δ * ∣1, 1⟩ →
+    p = (normSq β + normSq δ) →
+    ϕ' = (1 / √p : ℂ) * (β * ∣0, 1⟩ + δ * ∣1, 1⟩) →
+    measure_partial 2 ϕ (p, ϕ')
 
 end QState

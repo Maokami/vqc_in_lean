@@ -49,10 +49,10 @@ def qubit1 : Qubit :=
 def qubit (x : ℕ) : Qubit :=
   if x = 0 then qubit0 else qubit1
 
-notation "∣" x "⟩" => qubit x
+notation "∣" x "⟩₀" => qubit x
 
 -- Any Qubit can be expressed as a linear combination of ∣0⟩ and ∣1⟩
-theorem qubit_decomposition (ϕ : Qubit) : ∃ α β : ℂ, ϕ = α * ∣0⟩ + β * ∣1⟩ := by
+theorem qubit_decomposition (ϕ : Qubit) : ∃ α β : ℂ, ϕ = α * ∣0⟩₀ + β * ∣1⟩₀ := by
   use ϕ 0 0, ϕ 1 0
   ext i j
   fin_cases j
@@ -89,8 +89,8 @@ theorem WF_Qubit_alt (ϕ : Qubit) :
     exact h_matrix
 
 -- Prove that the basis Qubits are WF_Qubits
-theorem WF_qubit0 : WF_Qubit ∣0⟩ := by simp
-theorem WF_qubit1 : WF_Qubit ∣1⟩ := by simp
+theorem WF_qubit0 : WF_Qubit ∣0⟩₀ := by simp
+theorem WF_qubit1 : WF_Qubit ∣1⟩₀ := by simp
 
 -- Define and verify Unitary
 def WF_Unitary {n : ℕ} (U : Matrix (Fin n) (Fin n) ℂ) : Prop :=
@@ -208,13 +208,13 @@ inductive Measure : Qubit → ℝ × Qubit → Prop
 | measure1 : ∀ ϕ : Qubit, Measure ϕ (‖ϕ 1 0‖ ^ 2, qubit1)
 
 -- Prove properties related to measurement
-theorem measure0_idem (ϕ : Qubit) (p : ℝ) : Measure ∣0⟩ (p, ϕ) → p ≠ 0 → ϕ = ∣0⟩ := by
+theorem measure0_idem (ϕ : Qubit) (p : ℝ) : Measure ∣0⟩₀ (p, ϕ) → p ≠ 0 → ϕ = ∣0⟩₀ := by
   intro h_meas h_nonzero
   cases h_meas
   · rfl
   · simp at h_nonzero
 
-theorem measure1_idem (ϕ : Qubit) (p : ℝ) : Measure ∣1⟩ (p, ϕ) → p ≠ 0 → ϕ = ∣1⟩ := by
+theorem measure1_idem (ϕ : Qubit) (p : ℝ) : Measure ∣1⟩₀ (p, ϕ) → p ≠ 0 → ϕ = ∣1⟩₀ := by
   intro h_meas h_nonzero
   cases h_meas
   · simp at h_nonzero
