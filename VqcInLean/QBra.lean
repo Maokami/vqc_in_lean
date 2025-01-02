@@ -80,15 +80,13 @@ def fromVector : {n : ℕ} → Vector ℕ n → QBra n
     let rest' : QBra n := fromQState rest
     Eq.mp (by simp [add_comm]) (kronecker b' rest')
 
--- TODO : I want to use "⟨" "∣" syntax for this, but it's not working.
--- So currently using "|" instead. I need to revise the syntax for QState and QBra.
-macro "⟨" xs:term,* "|" : term => do
+macro "⟨" xs:term,* "∣bra" : term => do
   let stxList := xs.getElems
   let n := stxList.size
   let sizeProof ← `((by rfl : #[ $[ $stxList],* ].size = $(mkNumLit (toString n))))
   `(QBra.fromVector (Vector.mk #[ $[ $stxList],* ] $sizeProof))
 
-#eval ⟨0|
-#eval ⟨0, 1, 1, 0, 1|
+#eval ⟨ 0 ∣bra
+#eval ⟨ 0, 1, 1, 0, 1 ∣bra
 
 end QBra
