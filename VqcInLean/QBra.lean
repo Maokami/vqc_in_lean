@@ -1,5 +1,6 @@
 import VqcInLean.Qubit
 import VqcInLean.QState
+import VqcInLean.QMatrix
 
 import Mathlib.Tactic
 import Mathlib.Data.Matrix.Kronecker
@@ -24,16 +25,13 @@ instance : CoeFun (QBra n) (λ _ => Fin 1 → Fin (2 ^ n) → ℂ) where
   coe ϕ := λ i j => ϕ.mat i j
 
 -- Scalar multiplication for QBra
-instance : HMul ℂ (QBra n) (QBra n) where
-  hMul c ϕ := { mat := c • ϕ.mat }
+instance : SMul ℂ (QBra n) where
+  smul c ϕ := { mat := c • ϕ.mat }
 
 -- Addition for QBra
-instance : HAdd (QBra n) (QBra n) (QBra n) where
-  hAdd ϕ ψ := { mat := ϕ.mat + ψ.mat }
+instance : Add (QBra n) where
+  add ϕ ψ := { mat := ϕ.mat + ψ.mat }
 
--- Multiplication for QBra with matrices
-noncomputable instance : HMul (Matrix (Fin 1) (Fin 1) ℂ) (QBra n) (QBra n) where
-  hMul u ϕ := { mat := u * ϕ.mat }
 
 @[ext]
 lemma ext {n : ℕ} {ϕ ψ : QBra n} (h : ∀ i j, ϕ i j = ψ i j) : ϕ = ψ := by
@@ -52,7 +50,7 @@ lemma apply_eq_coe (ϕ : QBra n) (i j) :
     ϕ.mat i j = (ϕ : Matrix (Fin 1) (Fin (2 ^ n)) ℂ) i j := rfl
 
 @[simp]
-lemma smul_apply (c : ℂ) (ϕ : QBra n) (i j) : (c * ϕ) i j = c * ϕ i j := rfl
+lemma smul_apply (c : ℂ) (ϕ : QBra n) (i j) : (c • ϕ) i j = c * ϕ i j := rfl
 
 @[simp]
 lemma add_apply (ϕ ψ : QBra n) (i j) : (ϕ + ψ) i j = ϕ i j + ψ i j := rfl
@@ -61,9 +59,7 @@ lemma add_apply (ϕ ψ : QBra n) (i j) : (ϕ + ψ) i j = ϕ i j + ψ i j := rfl
 @[simp]
 def kronecker (ϕ : QBra n) (ψ : QBra m) : QBra (n + m) :=
   -- Apply kronecker product to the underlying matrices
-  let product := ϕ.mat ⊗ₖ ψ.mat
-  -- Reindex the matrix to match the new dimensions
-  let reindexed := product.reindex finProdFinEquiv finProdFinEquiv
+  let reindexed := QMatrix.reindexToFinMul (ϕ.mat ⊗ₖ ψ.mat)
   { mat := Eq.mp (by ring_nf) reindexed }
 
 def fromQState (ϕ : QState n) : QBra n :=
