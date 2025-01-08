@@ -1,9 +1,10 @@
 import VqcInLean.Qubit
+import VqcInLean.QMatrix
 
 import Mathlib.Tactic
 import Mathlib.Data.Matrix.Kronecker
 
-open Complex Matrix Kronecker Qubit Lean.Syntax
+open Complex Matrix Kronecker Qubit Lean.Syntax QMatrix
 
 -- Multiqubit definition: 2ⁿx1 complex matrix
 structure QState (n : ℕ) where
@@ -27,12 +28,12 @@ instance : Coe Qubit (QState 1) where
   coe q := { mat := q.mat }
 
 -- Scalar multiplication for QState
-instance : HMul ℂ (QState n) (QState n) where
-  hMul c ϕ := { mat := c • ϕ.mat }
+instance : SMul ℂ (QState n) where
+  smul c ϕ := { mat := c • ϕ.mat }
 
 -- Addition for QState
-instance : HAdd (QState n) (QState n) (QState n) where
-  hAdd ϕ ψ := { mat := ϕ.mat + ψ.mat }
+instance : Add (QState n) where
+  add ϕ ψ := { mat := ϕ.mat + ψ.mat }
 
 -- Multiplication for QState
 noncomputable instance : HMul (Matrix (Fin (2 ^ n)) (Fin (2 ^ n)) ℂ) (QState n) (QState n) where
@@ -55,7 +56,7 @@ lemma apply_eq_coe (ϕ : QState n) (i j) :
     ϕ.mat i j = (ϕ : Matrix (Fin (2 ^ n)) (Fin 1) ℂ) i j := rfl
 
 @[simp]
-lemma smul_apply (c : ℂ) (ϕ : QState n) (i j) : (c * ϕ) i j = c * ϕ i j := rfl
+lemma smul_apply (c : ℂ) (ϕ : QState n) (i j) : (c • ϕ) i j = c * ϕ i j := rfl
 
 @[simp]
 lemma add_apply (ϕ ψ : QState n) (i j) : (ϕ + ψ) i j = ϕ i j + ψ i j := rfl
@@ -63,10 +64,8 @@ lemma add_apply (ϕ ψ : QState n) (i j) : (ϕ + ψ) i j = ϕ i j + ψ i j := rf
 -- Define Kronecker product for QState
 @[simp]
 def kronecker (ϕ : QState n) (ψ : QState m) : QState (n + m) :=
-  -- Apply kronecker product to the underlying matrices
-  let product := ϕ.mat ⊗ₖ ψ.mat
   -- Reindex the matrix to match the new dimensions
-  let reindexed := product.reindex finProdFinEquiv finProdFinEquiv
+  let reindexed := QMatrix.reindexToFinMul (ϕ.mat ⊗ₖ ψ.mat)
   { mat := Eq.mp (by ring_nf) reindexed }
 
 -- Add notation for Kronecker product
@@ -170,7 +169,7 @@ lemma fromVector11 :
 
 /-- Lemma on decomposition of a 2-qubit state into basis states. -/
 theorem qubit_decomposition2 (ϕ : QState 2) :
-  ∃ (α β γ δ : ℂ), ϕ = α * ket∣0, 0⟩ + β * ket∣0, 1⟩ + γ * ket∣1, 0⟩ + δ * ket∣1, 1⟩ := by
+  ∃ (α β γ δ : ℂ), ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ := by
   let α := ϕ 0 0   -- row=0, col=0
   let β := ϕ 1 0   -- row=1, col=0
   let γ := ϕ 2 0   -- row=2, col=0
@@ -234,7 +233,7 @@ lemma CNOT11 : CNOT * ket∣1, 1⟩ = ket∣1, 0⟩ :=
 
 -- Definition of a Bell state.
 noncomputable def bell : QState 2 :=
-   (1 / √2 : ℂ) * ket∣0, 0⟩ + (1 / √2 : ℂ) * ket∣1, 1⟩
+   (1 / √2 : ℂ) • ket∣0, 0⟩ + (1 / √2 : ℂ) • ket∣1, 1⟩
 
 -- -- Definition of a Bell state generated using CNOT and H gate.
 -- def bell' : QState 2 :=
@@ -284,47 +283,47 @@ lemma SWAPxy : ∀ x y : Fin 2, SWAP * (ket∣x, y⟩ : QState 2) = ket∣y, x�
 -- Define total measurement on 1 qubit.
 inductive measure' : QState 1 → ℝ × QState 1 → Prop
 | measure0 (ϕ : QState 1) (α β : ℂ) :
-    ϕ = α * ket∣0⟩ + β * ket∣1⟩ →
+    ϕ = α • ket∣0⟩ + β • ket∣1⟩ →
     measure' ϕ (normSq α, ket∣0⟩)
 | measure1 (ϕ : QState 1) (α β : ℂ) :
-    ϕ = α * ket∣0⟩ + β * ket∣1⟩ →
+    ϕ = α • ket∣0⟩ + β • ket∣1⟩ →
     measure' ϕ (normSq β, ket∣1⟩)
 
 -- Define total measurement on 2 qubits.
 inductive measure_total : QState 2 → ℝ × QState 2 → Prop
 | measure00 (ϕ : QState 2) (α β γ δ : ℂ) :
-    ϕ = α * ket∣0, 0⟩ + β * ket∣0, 1⟩ + γ * ket∣1, 0⟩ + δ * ket∣1, 1⟩ →
+    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
     measure_total ϕ (normSq α, ket∣0, 0⟩)
 | measure01 (ϕ : QState 2) (α β γ δ : ℂ) :
-    ϕ = α * ket∣0, 0⟩ + β * ket∣0, 1⟩ + γ * ket∣1, 0⟩ + δ * ket∣1, 1⟩ →
+    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
     measure_total ϕ (normSq β, ket∣0, 1⟩)
 | measure10 (ϕ : QState 2) (α β γ δ : ℂ) :
-    ϕ = α * ket∣0, 0⟩ + β * ket∣0, 1⟩ + γ * ket∣1, 0⟩ + δ * ket∣1, 1⟩ →
+    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
     measure_total ϕ (normSq γ, ket∣1, 0⟩)
 | measure11 (ϕ : QState 2) (α β γ δ : ℂ) :
-    ϕ = α * ket∣0, 0⟩ + β * ket∣0, 1⟩ + γ * ket∣1, 0⟩ + δ * ket∣1, 1⟩ →
+    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
     measure_total ϕ (normSq δ, ket∣1, 1⟩)
 
 inductive measure_partial : ℕ → QState 2 → ℝ × QState 2 → Prop
 | measure_p_1_0 (ϕ ϕ' : QState 2) (α β γ δ : ℂ) (p : ℝ) :
-    ϕ = α * ket∣0, 0⟩ + β * ket∣0, 1⟩ + γ * ket∣1, 0⟩ + δ * ket∣1, 1⟩ →
+    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
     p = (normSq α + normSq β) →
-    ϕ' = (1 / √p : ℂ) * (α * ket∣0, 0⟩ + β * ket∣0, 1⟩) →
+    ϕ' = (1 / √p : ℂ) • (α • ket∣0, 0⟩ + β • ket∣0, 1⟩) →
     measure_partial 1 ϕ (p, ϕ')
 | measure_p_1_1 (ϕ ϕ' : QState 2) (α β γ δ : ℂ) (p : ℝ) :
-    ϕ = α * ket∣0, 0⟩ + β * ket∣0, 1⟩ + γ * ket∣1, 0⟩ + δ * ket∣1, 1⟩ →
+    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
     p = (normSq γ + normSq δ) →
-    ϕ' = (1 / √p : ℂ) * (γ * ket∣1, 0⟩ + δ * ket∣1, 1⟩) →
+    ϕ' = (1 / √p : ℂ) • (γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩) →
     measure_partial 1 ϕ (p, ϕ')
 | measure_p_2_0 (ϕ ϕ' : QState 2) (α β γ δ : ℂ) (p : ℝ) :
-    ϕ = α * ket∣0, 0⟩ + β * ket∣0, 1⟩ + γ * ket∣1, 0⟩ + δ * ket∣1, 1⟩ →
+    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
     p = (normSq α + normSq γ) →
-    ϕ' = (1 / √p : ℂ) * (α * ket∣0, 0⟩ + γ * ket∣1, 0⟩) →
+    ϕ' = (1 / √p : ℂ) • (α • ket∣0, 0⟩ + γ • ket∣1, 0⟩) →
     measure_partial 2 ϕ (p, ϕ')
 | measure_p_2_1 (ϕ ϕ' : QState 2) (α β γ δ : ℂ) (p : ℝ) :
-    ϕ = α * ket∣0, 0⟩ + β * ket∣0, 1⟩ + γ * ket∣1, 0⟩ + δ * ket∣1, 1⟩ →
+    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
     p = (normSq β + normSq δ) →
-    ϕ' = (1 / √p : ℂ) * (β * ket∣0, 1⟩ + δ * ket∣1, 1⟩) →
+    ϕ' = (1 / √p : ℂ) • (β • ket∣0, 1⟩ + δ • ket∣1, 1⟩) →
     measure_partial 2 ϕ (p, ϕ')
 
 end QState
