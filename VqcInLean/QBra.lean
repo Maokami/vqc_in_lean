@@ -32,6 +32,9 @@ instance : SMul ℂ (QBra n) where
 instance : Add (QBra n) where
   add ϕ ψ := { mat := ϕ.mat + ψ.mat }
 
+-- Multiplication for QBra
+noncomputable instance : HMul (QState n) (QBra n) (Matrix (Fin (2 ^ n)) (Fin (2 ^ n)) ℂ) where
+  hMul ϕ ψ := ϕ.mat * ψ.mat
 
 @[ext]
 lemma ext {n : ℕ} {ϕ ψ : QBra n} (h : ∀ i j, ϕ i j = ψ i j) : ϕ = ψ := by
@@ -62,27 +65,46 @@ def kronecker (ϕ : QBra n) (ψ : QBra m) : QBra (n + m) :=
   let reindexed := QMatrix.reindexToFinMul (ϕ.mat ⊗ₖ ψ.mat)
   { mat := Eq.mp (by ring_nf) reindexed }
 
-def fromQState (ϕ : QState n) : QBra n :=
-  { mat := ϕ.matᴴ }
-
 def fromVector : {n : ℕ} → Vector ℕ n → QBra n
   | 0, _ => { mat := (1 : Matrix (Fin 1) (Fin 1) ℂ).conjTranspose }
   | n + 1, v =>
     let x := v.head
     let xs := v.tail
-    let q : QState 1 := QState.fromVector (Vector.mk #[x] rfl)
-    let rest : QState n := QState.fromVector xs
-    let b' : QBra 1 := fromQState q
-    let rest' : QBra n := fromQState rest
-    Eq.mp (by simp [add_comm]) (kronecker b' rest')
+    let q : QBra 1 := ⟨(qubit x).mat.conjTranspose⟩
+    let rest : QBra n := QBra.fromVector xs
+    Eq.mp (by simp [add_comm]) (kronecker q rest)
 
-macro "⟨" xs:term,* "∣bra" : term => do
+syntax "⟨" term,* "∣⟩" : term
+macro_rules
+| `(⟨ $xs:term,* ∣⟩) => do
   let stxList := xs.getElems
   let n := stxList.size
   let sizeProof ← `((by rfl : #[ $[ $stxList],* ].size = $(mkNumLit (toString n))))
-  `(QBra.fromVector (Vector.mk #[ $[ $stxList],* ] $sizeProof))
+  `(fromVector (Vector.mk #[ $[ $stxList],* ] $sizeProof))
 
-#eval ⟨ 0 ∣bra
-#eval ⟨ 0, 1, 1, 0, 1 ∣bra
+#eval ⟨ 0 ∣⟩
+
+#eval ⟨ 0, 1, 1, 0, 1 ∣⟩
+
+@[simp]
+lemma fromVectorBra0 : ⟨0∣⟩ = ⟨![![1, 0]]⟩ := by
+  ext i j
+  simp [QBra.fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
+  have h1 : ({ toArray := #[0], size_toArray := by rfl }: Vector ℕ 1).head = 0 := by rfl
+  fin_cases j
+  fin_cases i
+  all_goals
+    simp [h1]
+    try norm_cast
+
+lemma fromVectorBra1 : ⟨1∣⟩ = ⟨![![0, 1]]⟩ := by
+  ext i j
+  simp [QBra.fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
+  have h1 : ({ toArray := #[1], size_toArray := by rfl }: Vector ℕ 1).head = 1 := by rfl
+  fin_cases j
+  fin_cases i
+  all_goals
+    simp [h1]
+    try norm_cast
 
 end QBra

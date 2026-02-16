@@ -80,16 +80,18 @@ def fromVector : {n : ℕ} → Vector ℕ n → QState n
     let rest : QState n := fromVector xs
     Eq.mp (by simp [add_comm]) (q ⊗ₖ rest : QState (1 + n))
 
-macro "ket∣" xs:term,* "⟩": term => do
-  let stxList := xs.getElems
-  let n := stxList.size
-  let sizeProof ← `((by rfl : #[ $[ $stxList],* ].size = $(mkNumLit (toString n))))
-  `(fromVector (Vector.mk #[ $[ $stxList],* ] $sizeProof))
+syntax "⟨∣ " term,* "⟩" : term
+macro_rules
+| `(⟨∣ $xs:term,* ⟩) => do
+    let stxList := xs.getElems
+    let n := stxList.size
+    let sizeProof ← `((by rfl : #[ $[ $stxList],* ].size = $(mkNumLit (toString n))))
+    `(fromVector (Vector.mk #[ $[ $stxList],* ] $sizeProof))
 
-#eval ket∣ 0 ⟩
-#eval ket∣ 0, 0, 1, 0 ⟩
+#eval ⟨∣ 0 ⟩
+#eval ⟨∣ 0, 0, 1, 0 ⟩
 
-lemma test_qubits : ket∣0, 1⟩ = ket∣0⟩ ⊗ₖ ket∣1⟩ := by
+lemma test_qubits : ⟨∣0, 1⟩ = ⟨∣0⟩ ⊗ₖ ⟨∣1⟩ := by
   ext i j
   simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
   have h1 : ({ toArray := #[0, 1], size_toArray := by rfl }: Vector ℕ 2).head = 0 := by rfl
@@ -112,9 +114,30 @@ lemma test_qubits : ket∣0, 1⟩ = ket∣0⟩ ⊗ₖ ket∣1⟩ := by
   simp_all
 
 -- TODO : How to unify the following lemmas into a single lemma?
--- fromVector00 = ![1,0,0,0]
+@[simp]
+lemma fromVectorKet0 : ⟨∣0⟩ = ⟨![1,0]⟩ := by
+  ext i j
+  simp [QState.fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
+  have h1 : ({ toArray := #[0], size_toArray := by rfl }: Vector ℕ 1).head = 0 := by rfl
+  fin_cases j
+  fin_cases i
+  all_goals
+    simp [h1]
+    try norm_cast
+
+@[simp]
+lemma fromVectorKet1 : ⟨∣1⟩ = ⟨![0, 1]⟩ := by
+  ext i j
+  simp [QState.fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
+  have h1 : ({ toArray := #[1], size_toArray := by rfl }: Vector ℕ 1).head = 1 := by rfl
+  fin_cases j
+  fin_cases i
+  all_goals
+    simp [h1]
+    try norm_cast
+
 lemma fromVector00:
-    ket∣0, 0⟩ = ⟨![1,0,0,0]⟩  := by
+    ⟨∣0, 0⟩ = ⟨![1,0,0,0]⟩  := by
   ext i j
   simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
 
@@ -128,7 +151,7 @@ lemma fromVector00:
     try norm_cast
 
 lemma fromVector01:
-    ket∣0, 1⟩ = ⟨![0,1,0,0]⟩  := by
+    ⟨∣0, 1⟩ = ⟨![0,1,0,0]⟩  := by
   ext i j
   simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
 
@@ -142,7 +165,7 @@ lemma fromVector01:
     try norm_cast
 
 lemma fromVector10 :
-    ket∣1, 0⟩ = ⟨![0,0,1,0]⟩  := by
+    ⟨∣1, 0⟩ = ⟨![0,0,1,0]⟩  := by
   ext i j
   simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
 
@@ -155,7 +178,7 @@ lemma fromVector10 :
     try norm_cast
 
 lemma fromVector11 :
-    ket∣1, 1⟩ = ⟨![0,0,0,1]⟩  := by
+    ⟨∣1, 1⟩ = ⟨![0,0,0,1]⟩  := by
   ext i j
   simp [fromVector, finProdFinEquiv, Fin.divNat, Fin.modNat]
 
@@ -169,7 +192,7 @@ lemma fromVector11 :
 
 /-- Lemma on decomposition of a 2-qubit state into basis states. -/
 theorem qubit_decomposition2 (ϕ : QState 2) :
-  ∃ (α β γ δ : ℂ), ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ := by
+  ∃ (α β γ δ : ℂ), ϕ = α • ⟨∣0, 0⟩ + β • ⟨∣0, 1⟩ + γ • ⟨∣1, 0⟩ + δ • ⟨∣1, 1⟩ := by
   let α := ϕ 0 0   -- row=0, col=0
   let β := ϕ 1 0   -- row=1, col=0
   let γ := ϕ 2 0   -- row=2, col=0
@@ -194,10 +217,10 @@ def CNOT : Matrix (Fin (2 ^ 2)) (Fin (2 ^ 2)) ℂ :=
 -- Define the basis states for 2 qubits
 def basis2 (i : Fin 4) : QState 2 :=
   match i with
-  | 0 => ket∣0, 0⟩
-  | 1 => ket∣0, 1⟩
-  | 2 => ket∣1, 0⟩
-  | 3 => ket∣1, 1⟩
+  | 0 => ⟨∣0, 0⟩
+  | 1 => ⟨∣0, 1⟩
+  | 2 => ⟨∣1, 0⟩
+  | 3 => ⟨∣1, 1⟩
 
 -- Simplify the action of CNOT on basis states
 lemma CNOT_basis_action (i : Fin 4) :
@@ -219,27 +242,27 @@ lemma CNOT_basis_action (i : Fin 4) :
       simp only [HMul.hMul]
       simp
 
-lemma CNOT00 : CNOT * ket∣0, 0⟩ = ket∣0, 0⟩ :=
+lemma CNOT00 : CNOT * ⟨∣0, 0⟩ = ⟨∣0, 0⟩ :=
   CNOT_basis_action 0
 
-lemma CNOT01 : CNOT * ket∣0, 1⟩ = ket∣0, 1⟩ :=
+lemma CNOT01 : CNOT * ⟨∣0, 1⟩ = ⟨∣0, 1⟩ :=
   CNOT_basis_action 1
 
-lemma CNOT10 : CNOT * ket∣1, 0⟩ = ket∣1, 1⟩ :=
+lemma CNOT10 : CNOT * ⟨∣1, 0⟩ = ⟨∣1, 1⟩ :=
   CNOT_basis_action 2
 
-lemma CNOT11 : CNOT * ket∣1, 1⟩ = ket∣1, 0⟩ :=
+lemma CNOT11 : CNOT * ⟨∣1, 1⟩ = ⟨∣1, 0⟩ :=
   CNOT_basis_action 3
 
 -- Definition of a Bell state.
 noncomputable def bell : QState 2 :=
-   (1 / √2 : ℂ) • ket∣0, 0⟩ + (1 / √2 : ℂ) • ket∣1, 1⟩
+   (1 / √2 : ℂ) • ⟨∣0, 0⟩ + (1 / √2 : ℂ) • ⟨∣1, 1⟩
 
 -- -- Definition of a Bell state generated using CNOT and H gate.
 -- def bell' : QState 2 :=
 --   -- Define H ⊗ₖ 1
 --   let H1: Matrix (Fin (2 ^ 2)) (Fin (2 ^ 2)) ℂ := H ⊗ₖ (1 : Matrix (Fin 2) (Fin 2) ℂ)
---   CNOT * H1 * ∣0, 0⟩
+--   CNOT * H1 * ⟨∣0, 0⟩
 --
 -- -- Prove that bell = bell'
 -- lemma bell_bell' : bell = bell' := by
@@ -266,7 +289,7 @@ def SWAP : Matrix (Fin (2 ^ 2)) (Fin (2 ^ 2)) ℂ :=
 
 -- TODO
 -- SWAP gate swaps qubits.
-lemma SWAPxy : ∀ x y : Fin 2, SWAP * (ket∣x, y⟩ : QState 2) = ket∣y, x⟩ := by
+lemma SWAPxy : ∀ x y : Fin 2, SWAP * (⟨∣x, y⟩ : QState 2) = ⟨∣y, x⟩ := by
   intros x y
   fin_cases x
   all_goals
@@ -283,47 +306,47 @@ lemma SWAPxy : ∀ x y : Fin 2, SWAP * (ket∣x, y⟩ : QState 2) = ket∣y, x�
 -- Define total measurement on 1 qubit.
 inductive measure' : QState 1 → ℝ × QState 1 → Prop
 | measure0 (ϕ : QState 1) (α β : ℂ) :
-    ϕ = α • ket∣0⟩ + β • ket∣1⟩ →
-    measure' ϕ (normSq α, ket∣0⟩)
+    ϕ = α • ⟨∣0⟩ + β • ⟨∣1⟩ →
+    measure' ϕ (normSq α, ⟨∣0⟩)
 | measure1 (ϕ : QState 1) (α β : ℂ) :
-    ϕ = α • ket∣0⟩ + β • ket∣1⟩ →
-    measure' ϕ (normSq β, ket∣1⟩)
+    ϕ = α • ⟨∣0⟩ + β • ⟨∣1⟩ →
+    measure' ϕ (normSq β, ⟨∣1⟩)
 
 -- Define total measurement on 2 qubits.
 inductive measure_total : QState 2 → ℝ × QState 2 → Prop
 | measure00 (ϕ : QState 2) (α β γ δ : ℂ) :
-    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
-    measure_total ϕ (normSq α, ket∣0, 0⟩)
+    ϕ = α • ⟨∣0, 0⟩ + β • ⟨∣0, 1⟩ + γ • ⟨∣1, 0⟩ + δ • ⟨∣1, 1⟩ →
+    measure_total ϕ (normSq α, ⟨∣0, 0⟩)
 | measure01 (ϕ : QState 2) (α β γ δ : ℂ) :
-    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
-    measure_total ϕ (normSq β, ket∣0, 1⟩)
+    ϕ = α • ⟨∣0, 0⟩ + β • ⟨∣0, 1⟩ + γ • ⟨∣1, 0⟩ + δ • ⟨∣1, 1⟩ →
+    measure_total ϕ (normSq β, ⟨∣0, 1⟩)
 | measure10 (ϕ : QState 2) (α β γ δ : ℂ) :
-    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
-    measure_total ϕ (normSq γ, ket∣1, 0⟩)
+    ϕ = α • ⟨∣0, 0⟩ + β • ⟨∣0, 1⟩ + γ • ⟨∣1, 0⟩ + δ • ⟨∣1, 1⟩ →
+    measure_total ϕ (normSq γ, ⟨∣1, 0⟩)
 | measure11 (ϕ : QState 2) (α β γ δ : ℂ) :
-    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
-    measure_total ϕ (normSq δ, ket∣1, 1⟩)
+    ϕ = α • ⟨∣0, 0⟩ + β • ⟨∣0, 1⟩ + γ • ⟨∣1, 0⟩ + δ • ⟨∣1, 1⟩ →
+    measure_total ϕ (normSq δ, ⟨∣1, 1⟩)
 
 inductive measure_partial : ℕ → QState 2 → ℝ × QState 2 → Prop
 | measure_p_1_0 (ϕ ϕ' : QState 2) (α β γ δ : ℂ) (p : ℝ) :
-    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
+    ϕ = α • ⟨∣0, 0⟩ + β • ⟨∣0, 1⟩ + γ • ⟨∣1, 0⟩ + δ • ⟨∣1, 1⟩ →
     p = (normSq α + normSq β) →
-    ϕ' = (1 / √p : ℂ) • (α • ket∣0, 0⟩ + β • ket∣0, 1⟩) →
+    ϕ' = (1 / √p : ℂ) • (α • ⟨∣0, 0⟩ + β • ⟨∣0, 1⟩) →
     measure_partial 1 ϕ (p, ϕ')
 | measure_p_1_1 (ϕ ϕ' : QState 2) (α β γ δ : ℂ) (p : ℝ) :
-    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
+    ϕ = α • ⟨∣0, 0⟩ + β • ⟨∣0, 1⟩ + γ • ⟨∣1, 0⟩ + δ • ⟨∣1, 1⟩ →
     p = (normSq γ + normSq δ) →
-    ϕ' = (1 / √p : ℂ) • (γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩) →
+    ϕ' = (1 / √p : ℂ) • (γ • ⟨∣1, 0⟩ + δ • ⟨∣1, 1⟩) →
     measure_partial 1 ϕ (p, ϕ')
 | measure_p_2_0 (ϕ ϕ' : QState 2) (α β γ δ : ℂ) (p : ℝ) :
-    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
+    ϕ = α • ⟨∣0, 0⟩ + β • ⟨∣0, 1⟩ + γ • ⟨∣1, 0⟩ + δ • ⟨∣1, 1⟩ →
     p = (normSq α + normSq γ) →
-    ϕ' = (1 / √p : ℂ) • (α • ket∣0, 0⟩ + γ • ket∣1, 0⟩) →
+    ϕ' = (1 / √p : ℂ) • (α • ⟨∣0, 0⟩ + γ • ⟨∣1, 0⟩) →
     measure_partial 2 ϕ (p, ϕ')
 | measure_p_2_1 (ϕ ϕ' : QState 2) (α β γ δ : ℂ) (p : ℝ) :
-    ϕ = α • ket∣0, 0⟩ + β • ket∣0, 1⟩ + γ • ket∣1, 0⟩ + δ • ket∣1, 1⟩ →
+    ϕ = α • ⟨∣0, 0⟩ + β • ⟨∣0, 1⟩ + γ • ⟨∣1, 0⟩ + δ • ⟨∣1, 1⟩ →
     p = (normSq β + normSq δ) →
-    ϕ' = (1 / √p : ℂ) • (β • ket∣0, 1⟩ + δ • ket∣1, 1⟩) →
+    ϕ' = (1 / √p : ℂ) • (β • ⟨∣0, 1⟩ + δ • ⟨∣1, 1⟩) →
     measure_partial 2 ϕ (p, ϕ')
 
 end QState

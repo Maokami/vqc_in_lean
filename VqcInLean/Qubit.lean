@@ -4,7 +4,7 @@ open Matrix Real Complex ComplexConjugate
 
 -- Qubit definition: 2x1 complex matrix
 structure Qubit where
-  mat : Matrix (Fin 2) (Fin 1) ℂ
+  mat : Matrix (Fin (2^1)) (Fin 1) ℂ
 
 namespace Qubit
 
@@ -15,11 +15,11 @@ lemma ext {ϕ ψ : Qubit} (h : ϕ.mat = ψ.mat) : ϕ = ψ := by
   simp_all
 
 -- Define coercion to Matrix
-instance : Coe Qubit (Matrix (Fin 2) (Fin 1) ℂ) where
+instance : Coe Qubit (Matrix (Fin (2^1)) (Fin 1) ℂ) where
   coe := Qubit.mat
 
 -- Make Qubit callable as a function
-instance : CoeFun Qubit (λ _ => Fin 2 → Fin 1 → ℂ) where
+instance : CoeFun Qubit (λ _ => Fin (2^1) → Fin 1 → ℂ) where
   coe ϕ := λ i j => ϕ.mat i j
 
 -- Scalar multiplication for Qubit
@@ -63,7 +63,7 @@ theorem qubit_decomposition (ϕ : Qubit) : ∃ α β : ℂ, ϕ = α * ∣0⟩₀
 -- Define Well-formed Qubit
 @[simp]
 def WF_Qubit (ϕ : Qubit) : Prop :=
-  ∑ i : Fin 2, ‖ϕ i 0‖ ^ 2 = 1
+  ∑ i : Fin (2^1), ‖ϕ i 0‖ ^ 2 = 1
 
 -- Alternative definition of WF_Qubit
 theorem WF_Qubit_alt (ϕ : Qubit) :
@@ -112,11 +112,11 @@ theorem valid_qubit_function :
   rw [h_new, h_unitary, Matrix.mul_one, h_wf]
 
 -- Define Unitary operations (e.g., Pauli matrices)
-def X : Matrix (Fin 2) (Fin 2) ℂ :=
+def X : Matrix (Fin (2^1)) (Fin (2^1)) ℂ :=
   ![![0, 1], ![1, 0]]
-def Y : Matrix (Fin 2) (Fin 2) ℂ :=
+def Y : Matrix (Fin (2^1)) (Fin (2^1)) ℂ :=
   ![![0, -I], ![I, 0]]
-def Z : Matrix (Fin 2) (Fin 2) ℂ :=
+def Z : Matrix (Fin (2^1)) (Fin (2^1)) ℂ :=
   ![![1, 0], ![0, -1]]
 
 theorem WF_X : WF_Unitary X := by
@@ -147,7 +147,7 @@ theorem WF_Z : WF_Unitary Z := by
       simp
 
 -- Define Hadamard matrix
-noncomputable def H : Matrix (Fin 2) (Fin 2) ℂ :=
+noncomputable def H : Matrix (Fin (2^1)) (Fin (2^1)) ℂ :=
   (1 / √ 2 : ℂ) • ![![1, 1], ![1, -1]]
 
 theorem WF_H : WF_Unitary H := by
